@@ -31,12 +31,13 @@ class _HomePageState extends State<HomePage> {
     if (files.isEmpty) return;
     await Navigator.push(context, MaterialPageRoute(builder: (_) => SendPage(storage: widget.storage, discovery: widget.discovery, files: files, deviceName: name, target: target)));
   }
+  void _receive() { Navigator.push(context, MaterialPageRoute(builder: (_) => ReceivePage(storage: widget.storage, discovery: widget.discovery))); }
   @override Widget build(BuildContext context) => Directionality(textDirection: TextDirection.rtl, child: Scaffold(
     appBar: AppBar(title: const Text('وصلة', style: TextStyle(fontWeight: FontWeight.w900)), actions: [IconButton(onPressed: widget.toggleTheme, icon: const Icon(Icons.brightness_6_rounded)), IconButton(onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => SettingsPage(storage: widget.storage))), icon: const Icon(Icons.settings_rounded))]),
     body: ListView(padding: const EdgeInsets.fromLTRB(20, 12, 20, 32), children: [
       const Text('نقل مباشر. بدون وسيط.', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900)), const SizedBox(height: 7),
       Text('ملفاتك تنتقل من جهاز إلى جهاز عبر الشبكة المحلية.', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)), const SizedBox(height: 28),
-      Row(children: [Expanded(child: _Action(icon: Icons.upload_rounded, title: 'إرسال', subtitle: 'اختر ملفاتك', onTap: () => _pick())), const SizedBox(width: 12), Expanded(child: _Action(icon: Icons.download_rounded, title: 'استقبال', subtitle: 'انتظر اتصالاً', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ReceivePage(storage: widget.storage, discovery: widget.discovery))))]),
+      Row(children: [Expanded(child: _Action(icon: Icons.upload_rounded, title: 'إرسال', subtitle: 'اختر ملفاتك', onTap: () => _pick())), const SizedBox(width: 12), Expanded(child: _Action(icon: Icons.download_rounded, title: 'استقبال', subtitle: 'انتظر اتصالاً', onTap: _receive))]),
       const SizedBox(height: 30), Row(children: [const Icon(Icons.radar_rounded), const SizedBox(width: 8), const Text('أجهزة قريبة', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)), const Spacer(), Text('${devices.length}')]), const SizedBox(height: 10),
       if (devices.isEmpty) const _EmptyNearby() else ...devices.map((d) => _DeviceTile(device: d, onTap: () => _pick(target: d))), const SizedBox(height: 20), const _PrivacyStrip(),
     ]),

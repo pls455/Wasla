@@ -16,6 +16,8 @@ jobs:
           cache: true
       - name: Generate Android host project
         run: flutter create . --platforms=android --org=com.wasla --project-name=wasla
+      - name: Remove generated demo test
+        run: rm -f test/widget_test.dart
       - name: Add network permissions
         run: |
           python3 - <<'PY'

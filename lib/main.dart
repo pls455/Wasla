@@ -1,2 +1,6 @@
-// Wasla entrypoint is implemented in ui_v2.dart.
-export 'ui_v2.dart';
+import 'package:flutter/material.dart';
+import 'ui_v2.dart';
+
+void main() {
+  runApp(const WaslaApp());
+}

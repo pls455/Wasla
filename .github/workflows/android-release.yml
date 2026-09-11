@@ -16,20 +16,106 @@ jobs:
           cache: true
       - name: Generate Android host project
         run: flutter create . --platforms=android --org=com.wasla --project-name=wasla
-      - name: Remove generated demo test
-        run: rm -f test/widget_test.dart
-      - name: Add network permissions
+      - name: Install Wasla native Android bridge
+        run: |
+          mkdir -p android/app/src/main/kotlin/com/wasla/wasla
+          cat > android/app/src/main/kotlin/com/wasla/wasla/MainActivity.kt <<'KOTLIN'
+          package com.wasla.wasla
+
+          import android.graphics.Bitmap
+          import android.graphics.Canvas
+          import android.graphics.drawable.Drawable
+          import android.os.Bundle
+          import android.util.Base64
+          import io.flutter.embedding.android.FlutterActivity
+          import io.flutter.embedding.engine.FlutterEngine
+          import io.flutter.plugin.common.MethodChannel
+          import java.io.ByteArrayOutputStream
+          import java.io.File
+
+          class MainActivity : FlutterActivity() {
+            private val channel = "com.wasla/apps"
+
+            override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
+              super.configureFlutterEngine(flutterEngine)
+              MethodChannel(flutterEngine.dartExecutor.binaryMessenger, channel).setMethodCallHandler { call, result ->
+                when (call.method) {
+                  "listApps" -> result.success(listLaunchableApps())
+                  "exportApp" -> {
+                    val packageName = call.argument<String>("packageName")
+                    if (packageName == null) result.error("ARGUMENT", "Missing package name", null)
+                    else result.success(exportApk(packageName))
+                  }
+                  else -> result.notImplemented()
+                }
+              }
+            }
+
+            private fun listLaunchableApps(): List<Map<String, Any?>> {
+              val intent = packageManager.getLaunchIntentForPackage(packageName)
+              val query = packageManager.queryIntentActivities(
+                android.content.Intent(android.content.Intent.ACTION_MAIN).addCategory(android.content.Intent.CATEGORY_LAUNCHER), 0
+              )
+              return query.mapNotNull { info ->
+                val app = info.activityInfo.applicationInfo
+                if (app.packageName == packageName) return@mapNotNull null
+                try {
+                  val label = app.loadLabel(packageManager).toString().ifBlank { app.packageName }
+                  val icon = app.loadIcon(packageManager)
+                  val size = File(app.sourceDir).length()
+                  mapOf(
+                    "packageName" to app.packageName,
+                    "name" to label,
+                    "size" to size,
+                    "icon" to drawableToBase64(icon)
+                  )
+                } catch (_: Exception) { null }
+              }.distinctBy { it["packageName"] as String }.sortedBy { (it["name"] as String).lowercase() }
+            }
+
+            private fun exportApk(packageName: String): String? {
+              return try {
+                val app = packageManager.getApplicationInfo(packageName, 0)
+                val source = File(app.sourceDir)
+                if (!source.exists() || !source.canRead()) return null
+                val dir = File(cacheDir, "wasla_apps")
+                dir.mkdirs()
+                val safe = packageName.replace(Regex("[^A-Za-z0-9._-]"), "_")
+                val target = File(dir, "$safe.apk")
+                source.copyTo(target, overwrite = true)
+                target.absolutePath
+              } catch (_: Exception) { null }
+            }
+
+            private fun drawableToBase64(drawable: Drawable): String? {
+              return try {
+                val width = 96
+                val height = 96
+                val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+                val canvas = Canvas(bitmap)
+                drawable.setBounds(0, 0, width, height)
+                drawable.draw(canvas)
+                val stream = ByteArrayOutputStream()
+                bitmap.compress(Bitmap.CompressFormat.PNG, 90, stream)
+                Base64.encodeToString(stream.toByteArray(), Base64.NO_WRAP)
+              } catch (_: Exception) { null }
+            }
+          }
+          KOTLIN
+      - name: Add network and notification permissions
         run: |
           python3 - <<'PY'
           from pathlib import Path
           p = Path('android/app/src/main/AndroidManifest.xml')
           s = p.read_text()
           marker = '<manifest xmlns:android="http://schemas.android.com/apk/res/android">'
-          permissions = '\n    <uses-permission android:name="android.permission.INTERNET" />\n    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />\n    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />\n    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />\n'
+          permissions = '''\n    <uses-permission android:name="android.permission.INTERNET" />\n    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />\n    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />\n    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />\n    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\n'''
           if 'android.permission.INTERNET' not in s:
               s = s.replace(marker, marker + permissions)
           p.write_text(s)
           PY
+      - name: Remove generated demo test
+        run: rm -f test/widget_test.dart
       - run: flutter pub get
       - run: flutter analyze --no-fatal-infos
       - run: flutter test

@@ -37,7 +37,6 @@ jobs:
 
           class MainActivity : FlutterActivity() {
             private val channel = "com.wasla/apps"
-
             override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
               super.configureFlutterEngine(flutterEngine)
               MethodChannel(flutterEngine.dartExecutor.binaryMessenger, channel).setMethodCallHandler { call, result ->
@@ -53,11 +52,8 @@ jobs:
                 }
               }
             }
-
             private fun listLaunchableApps(): List<Map<String, Any?>> {
-              val query = packageManager.queryIntentActivities(
-                Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER), 0
-              )
+              val query = packageManager.queryIntentActivities(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER), 0)
               return query.mapNotNull { info ->
                 val app = info.activityInfo.applicationInfo
                 try {
@@ -68,7 +64,6 @@ jobs:
                 } catch (_: Exception) { null }
               }.distinctBy { it["packageName"] as String }.sortedBy { (it["name"] as String).lowercase() }
             }
-
             private fun exportApk(packageName: String): String? = try {
               val app = packageManager.getApplicationInfo(packageName, 0)
               val source = File(app.sourceDir)
@@ -79,7 +74,6 @@ jobs:
               source.copyTo(target, overwrite = true)
               target.absolutePath
             } catch (_: Exception) { null }
-
             private fun readSharedContent(): Map<String, Any?> {
               val result = mutableMapOf<String, Any?>("files" to emptyList<String>(), "text" to null)
               val files = mutableListOf<String>()
@@ -95,7 +89,6 @@ jobs:
               result["files"] = files
               return result
             }
-
             private fun copySharedUri(uri: Uri, index: Int): String? = try {
               val name = queryName(uri) ?: "shared_$index"
               val safe = name.replace(Regex("[^A-Za-z0-9._-]"), "_")
@@ -103,15 +96,9 @@ jobs:
               contentResolver.openInputStream(uri)?.use { input -> target.outputStream().use { output -> input.copyTo(output) } }
               if (target.exists()) target.absolutePath else null
             } catch (_: Exception) { null }
-
-            private fun queryName(uri: Uri): String? {
-              return try {
-                contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c ->
-                  if (c.moveToFirst()) c.getString(0) else null
-                }
-              } catch (_: Exception) { null }
-            }
-
+            private fun queryName(uri: Uri): String? = try {
+              contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c -> if (c.moveToFirst()) c.getString(0) else null }
+            } catch (_: Exception) { null }
             private fun drawableToBase64(drawable: Drawable): String? = try {
               val bitmap = Bitmap.createBitmap(96, 96, Bitmap.Config.ARGB_8888)
               drawable.setBounds(0, 0, 96, 96); drawable.draw(Canvas(bitmap))
@@ -153,6 +140,7 @@ jobs:
           s = p.read_text()
           s = s.replace("final seconds = value.inSeconds.clamp(0, 999999);", "final seconds = value.inSeconds.clamp(0, 999999).toInt();")
           s = s.replace("(p.bytes / p.total).clamp(0.0, 1.0)", "(p.bytes / p.total).clamp(0.0, 1.0).toDouble()")
+          s = s.replace("server?.port", "server.port")
           p.write_text(s)
           PY
       - name: Remove generated demo test

@@ -26,12 +26,7 @@ class AppItem {
   final String packageName, name;
   final int size;
   final String? iconBase64;
-  factory AppItem.fromMap(Map<String, dynamic> m) => AppItem(
-    packageName: m['packageName'] as String,
-    name: m['name'] as String,
-    size: (m['size'] as num?)?.toInt() ?? 0,
-    iconBase64: m['icon'] as String?,
-  );
+  factory AppItem.fromMap(Map<String, dynamic> m) => AppItem(packageName: m['packageName'] as String, name: m['name'] as String, size: (m['size'] as num?)?.toInt() ?? 0, iconBase64: m['icon'] as String?);
 }
 
 void main() => runApp(const WaslaApp());
@@ -45,30 +40,13 @@ class _WaslaAppState extends State<WaslaApp> {
   final storage = StorageService();
   late final discovery = DiscoveryService(storage);
   ThemeMode mode = ThemeMode.dark;
-
   @override void initState() { super.initState(); discovery.start(); }
   @override void dispose() { discovery.dispose(); super.dispose(); }
-
-  @override Widget build(BuildContext context) => MaterialApp(
-    debugShowCheckedModeBanner: false,
-    title: 'وصلة | Wasla',
-    themeMode: mode,
-    theme: _theme(Brightness.light),
-    darkTheme: _theme(Brightness.dark),
-    home: HomePage(storage: storage, discovery: discovery, onToggleTheme: () => setState(() => mode = mode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark)),
-  );
-
+  @override Widget build(BuildContext context) => MaterialApp(debugShowCheckedModeBanner: false, title: 'وصلة | Wasla', themeMode: mode, theme: _theme(Brightness.light), darkTheme: _theme(Brightness.dark), home: HomePage(storage: storage, discovery: discovery, onToggleTheme: () => setState(() => mode = mode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark)));
   ThemeData _theme(Brightness brightness) {
     final dark = brightness == Brightness.dark;
     final scheme = ColorScheme.fromSeed(seedColor: const Color(0xFF6C63FF), brightness: brightness);
-    return ThemeData(
-      useMaterial3: true,
-      brightness: brightness,
-      colorScheme: scheme,
-      scaffoldBackgroundColor: dark ? const Color(0xFF08090D) : const Color(0xFFF7F7FA),
-      appBarTheme: AppBarTheme(backgroundColor: Colors.transparent, elevation: 0, scrolledUnderElevation: 0, centerTitle: false),
-      cardTheme: CardThemeData(elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)), margin: EdgeInsets.zero),
-    );
+    return ThemeData(useMaterial3: true, brightness: brightness, colorScheme: scheme, scaffoldBackgroundColor: dark ? const Color(0xFF08090D) : const Color(0xFFF7F7FA), appBarTheme: const AppBarTheme(backgroundColor: Colors.transparent, elevation: 0, scrolledUnderElevation: 0), cardTheme: CardThemeData(elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(28))), margin: EdgeInsets.zero));
   }
 }
 
@@ -81,152 +59,53 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   List<NearbyDevice> devices = const [];
   String deviceName = 'هاتف وصلة';
-
-  @override void initState() {
-    super.initState();
-    widget.storage.deviceName().then((v) { if (mounted) setState(() => deviceName = v); });
-    widget.discovery.devices.listen((v) { if (mounted) setState(() => devices = v); });
-  }
-
+  @override void initState() { super.initState(); widget.storage.deviceName().then((v) { if (mounted) setState(() => deviceName = v); }); widget.discovery.devices.listen((v) { if (mounted) setState(() => devices = v); }); }
   Future<void> _sendFiles() async {
     final picked = await FilePicker.pickFiles(allowMultiple: true);
     if (!mounted || picked.isEmpty) return;
-    final files = picked.where((f) => f.path != null).map((f) => TransferFile(name: f.name, path: f.path!, size: f.length)).toList();
-    if (files.isEmpty) return;
-    _openSend(files);
+    final files = picked.where((f) => f.path != null).map((f) => TransferFile(name: f.name, path: f.path!, size: f.lengthSync() ?? 0)).toList();
+    if (files.isNotEmpty) _openSend(files);
   }
-
   void _openSend(List<TransferFile> files) => Navigator.push(context, MaterialPageRoute(builder: (_) => SendPage(storage: widget.storage, discovery: widget.discovery, files: files, deviceName: deviceName)));
   void _receive() => Navigator.push(context, MaterialPageRoute(builder: (_) => ReceivePage(storage: widget.storage, discovery: widget.discovery)));
 
-  @override Widget build(BuildContext context) => Directionality(
-    textDirection: TextDirection.rtl,
-    child: Scaffold(
-      appBar: AppBar(
-        title: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('وصلة', style: TextStyle(fontSize: 25, fontWeight: FontWeight.w900)), Text('Wasla', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 1.5))]),
-        actions: [IconButton(onPressed: widget.onToggleTheme, tooltip: 'المظهر', icon: const Icon(Icons.contrast_rounded)), IconButton(onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => SettingsPage(storage: widget.storage))), tooltip: 'الإعدادات', icon: const Icon(Icons.settings_outlined))],
-      ),
-      body: RefreshIndicator(
-        onRefresh: () async { await widget.discovery.start(); },
-        child: ListView(padding: const EdgeInsets.fromLTRB(20, 14, 20, 36), children: [
-          const Text('أرسل ملفاتك مباشرة.', style: TextStyle(fontSize: 31, fontWeight: FontWeight.w900, height: 1.1)),
-          const SizedBox(height: 8),
-          Text('بدون خادم وسيط. وصلة تختار أفضل اتصال متاح.', style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.onSurfaceVariant)),
-          const SizedBox(height: 26),
-          Row(children: [
-            Expanded(child: _PrimaryAction(icon: Icons.arrow_upward_rounded, title: 'إرسال', subtitle: 'ملفات أو تطبيقات', onTap: _showSendOptions)),
-            const SizedBox(width: 12),
-            Expanded(child: _SecondaryAction(icon: Icons.arrow_downward_rounded, title: 'استقبال', subtitle: 'انتظر طلبًا', onTap: _receive)),
-          ]),
-          const SizedBox(height: 30),
-          Row(children: [const Icon(Icons.radar_rounded, size: 21), const SizedBox(width: 9), const Text('الأجهزة القريبة', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800)), const Spacer(), Text('${devices.length}', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant))]),
-          const SizedBox(height: 10),
-          if (devices.isEmpty) const _EmptyNearby() else ...devices.map((d) => Padding(padding: const EdgeInsets.only(bottom: 8), child: _DeviceTile(device: d, onTap: () => _showSendOptions(target: d)))),
-          const SizedBox(height: 18),
-          _PrivacyStrip(deviceName: deviceName),
-        ]),
-      ),
-    ),
-  );
+  @override Widget build(BuildContext context) => Directionality(textDirection: TextDirection.rtl, child: Scaffold(
+    appBar: AppBar(title: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('وصلة', style: TextStyle(fontSize: 25, fontWeight: FontWeight.w900)), Text('Wasla', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 1.5))]), actions: [IconButton(onPressed: widget.onToggleTheme, tooltip: 'المظهر', icon: const Icon(Icons.contrast_rounded)), IconButton(onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => SettingsPage(storage: widget.storage))), tooltip: 'الإعدادات', icon: const Icon(Icons.settings_outlined))]),
+    body: RefreshIndicator(onRefresh: () async { await widget.discovery.start(); }, child: ListView(padding: const EdgeInsets.fromLTRB(20, 14, 20, 36), children: [
+      const Text('أرسل ملفاتك مباشرة.', style: TextStyle(fontSize: 31, fontWeight: FontWeight.w900, height: 1.1)),
+      const SizedBox(height: 8), Text('بدون خادم وسيط. وصلة تختار أفضل اتصال متاح.', style: TextStyle(fontSize: 14)), const SizedBox(height: 26),
+      Row(children: [Expanded(child: _PrimaryAction(icon: Icons.arrow_upward_rounded, title: 'إرسال', subtitle: 'ملفات أو تطبيقات', onTap: _showSendOptions)), const SizedBox(width: 12), Expanded(child: _SecondaryAction(icon: Icons.arrow_downward_rounded, title: 'استقبال', subtitle: 'انتظر طلبًا', onTap: _receive))]),
+      const SizedBox(height: 30), Row(children: [const Icon(Icons.radar_rounded, size: 21), const SizedBox(width: 9), const Text('الأجهزة القريبة', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800)), const Spacer(), Text('${devices.length}')]), const SizedBox(height: 10),
+      if (devices.isEmpty) const _EmptyNearby() else ...devices.map((d) => Padding(padding: const EdgeInsets.only(bottom: 8), child: _DeviceTile(device: d, onTap: () => _showSendOptions(target: d)))), const SizedBox(height: 18), _PrivacyStrip(deviceName: deviceName),
+    ]))));
 
-  void _showSendOptions({NearbyDevice? target}) => showModalBottomSheet<void>(
-    context: context, showDragHandle: true, backgroundColor: Theme.of(context).colorScheme.surface,
-    builder: (sheet) => Directionality(textDirection: TextDirection.rtl, child: Padding(
-      padding: const EdgeInsets.fromLTRB(20, 4, 20, 30),
-      child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('ماذا تريد أن ترسل؟', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900)),
-        const SizedBox(height: 7), Text(target == null ? 'اختر المحتوى ثم اختر الجهاز.' : 'إلى ${target.name}', style: TextStyle(color: Theme.of(sheet).colorScheme.onSurfaceVariant)),
-        const SizedBox(height: 18),
-        _SheetAction(icon: Icons.folder_rounded, title: 'ملفات', subtitle: 'صور، فيديو، مستندات وغيرها', onTap: () async { Navigator.pop(sheet); final picked = await FilePicker.pickFiles(allowMultiple: true); if (!mounted || picked.isEmpty) return; final files = picked.where((f) => f.path != null).map((f) => TransferFile(name: f.name, path: f.path!, size: f.length)).toList(); if (files.isNotEmpty) Navigator.push(context, MaterialPageRoute(builder: (_) => SendPage(storage: widget.storage, discovery: widget.discovery, files: files, deviceName: deviceName, target: target))); }),
-        const SizedBox(height: 10),
-        _SheetAction(icon: Icons.apps_rounded, title: 'تطبيقات', subtitle: 'اختر تطبيقات مثبتة على جهازك', onTap: () { Navigator.pop(sheet); Navigator.push(context, MaterialPageRoute(builder: (_) => AppPickerPage(onReady: (files) => _openSendTo(files, target)))); }),
-        const SizedBox(height: 10),
-        _SheetAction(icon: Icons.link_rounded, title: 'نص أو رابط', subtitle: 'ميزة المشاركة السريعة قادمة', onTap: () { Navigator.pop(sheet); ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('مشاركة النص والروابط ضمن المرحلة التالية.'))); }),
-      ]),
-    )),
-  );
-
+  void _showSendOptions({NearbyDevice? target}) => showModalBottomSheet<void>(context: context, showDragHandle: true, backgroundColor: Theme.of(context).colorScheme.surface, builder: (sheet) => Directionality(textDirection: TextDirection.rtl, child: Padding(padding: const EdgeInsets.fromLTRB(20, 4, 20, 30), child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+    const Text('ماذا تريد أن ترسل؟', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900)), const SizedBox(height: 7), Text(target == null ? 'اختر المحتوى ثم اختر الجهاز.' : 'إلى ${target.name}'), const SizedBox(height: 18),
+    _SheetAction(icon: Icons.folder_rounded, title: 'ملفات', subtitle: 'صور، فيديو، مستندات وغيرها', onTap: () async { Navigator.pop(sheet); final picked = await FilePicker.pickFiles(allowMultiple: true); if (!mounted || picked.isEmpty) return; final files = picked.where((f) => f.path != null).map((f) => TransferFile(name: f.name, path: f.path!, size: f.lengthSync() ?? 0)).toList(); if (files.isNotEmpty) Navigator.push(context, MaterialPageRoute(builder: (_) => SendPage(storage: widget.storage, discovery: widget.discovery, files: files, deviceName: deviceName, target: target))); }),
+    const SizedBox(height: 10), _SheetAction(icon: Icons.apps_rounded, title: 'تطبيقات', subtitle: 'اختر تطبيقات مثبتة على جهازك', onTap: () { Navigator.pop(sheet); Navigator.push(context, MaterialPageRoute(builder: (_) => AppPickerPage(onReady: (files) => _openSendTo(files, target)))); }),
+    const SizedBox(height: 10), _SheetAction(icon: Icons.link_rounded, title: 'نص أو رابط', subtitle: 'ضمن المرحلة التالية', onTap: () { Navigator.pop(sheet); ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('مشاركة النص والروابط ضمن المرحلة التالية.'))); }),
+  ]))));
   void _openSendTo(List<TransferFile> files, NearbyDevice? target) => Navigator.push(context, MaterialPageRoute(builder: (_) => SendPage(storage: widget.storage, discovery: widget.discovery, files: files, deviceName: deviceName, target: target)));
 }
 
-class AppPickerPage extends StatefulWidget {
-  const AppPickerPage({super.key, required this.onReady});
-  final void Function(List<TransferFile>) onReady;
-  @override State<AppPickerPage> createState() => _AppPickerPageState();
-}
-
+class AppPickerPage extends StatefulWidget { const AppPickerPage({super.key, required this.onReady}); final void Function(List<TransferFile>) onReady; @override State<AppPickerPage> createState() => _AppPickerPageState(); }
 class _AppPickerPageState extends State<AppPickerPage> {
   List<AppItem> apps = const []; final selected = <String>{}; bool loading = true; String query = '';
   @override void initState() { super.initState(); _load(); }
-  Future<void> _load() async { try { final v = await loadInstalledApps(); v.sort((a,b) => a.name.toLowerCase().compareTo(b.name.toLowerCase())); if (mounted) setState(() { apps = v; loading = false; }); } catch (_) { if (mounted) setState(() => loading = false); } }
-
-  @override Widget build(BuildContext context) {
-    final shown = apps.where((a) => a.name.toLowerCase().contains(query.toLowerCase()) || a.packageName.toLowerCase().contains(query.toLowerCase())).toList();
-    return Directionality(textDirection: TextDirection.rtl, child: Scaffold(
-      appBar: AppBar(title: const Text('التطبيقات', style: TextStyle(fontWeight: FontWeight.w900)), actions: [if (selected.isNotEmpty) Center(child: Padding(padding: const EdgeInsets.only(left: 14), child: Text('${selected.length} محدد')))]),
-      bottomNavigationBar: selected.isEmpty ? null : SafeArea(child: Padding(padding: const EdgeInsets.fromLTRB(20, 8, 20, 14), child: FilledButton.icon(onPressed: _prepare, icon: const Icon(Icons.arrow_upward_rounded), label: Text('إرسال ${selected.length} تطبيق')))),
-      body: loading ? const Center(child: CircularProgressIndicator()) : ListView(padding: const EdgeInsets.fromLTRB(20, 4, 20, 110), children: [
-        TextField(onChanged: (v) => setState(() => query = v), decoration: InputDecoration(hintText: 'ابحث عن تطبيق', prefixIcon: const Icon(Icons.search_rounded), filled: true, border: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: BorderSide.none))),
-        const SizedBox(height: 16),
-        Text('${shown.length} تطبيق متاح', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)), const SizedBox(height: 8),
-        ...shown.map((a) => _AppTile(app: a, selected: selected.contains(a.packageName), onTap: () => setState(() => selected.contains(a.packageName) ? selected.remove(a.packageName) : selected.add(a.packageName)))),
-        if (shown.isEmpty) const Padding(padding: EdgeInsets.only(top: 70), child: Center(child: Text('لم نجد تطبيقًا بهذا الاسم'))),
-      ]),
-    ));
-  }
-
-  Future<void> _prepare() async {
-    final chosen = apps.where((a) => selected.contains(a.packageName)).toList();
-    final files = <TransferFile>[];
-    for (final app in chosen) {
-      final path = await exportInstalledApp(app.packageName);
-      if (path != null && File(path).existsSync()) files.add(TransferFile(name: '${app.name}.apk', path: path, size: File(path).lengthSync()));
-    }
-    if (!mounted) return;
-    if (files.isEmpty) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تعذر تجهيز التطبيقات المحددة للإرسال.'))); return; }
-    Navigator.pop(context); widget.onReady(files);
-  }
+  Future<void> _load() async { try { final v = await loadInstalledApps(); v.sort((a,b)=>a.name.toLowerCase().compareTo(b.name.toLowerCase())); if(mounted)setState((){apps=v;loading=false;}); } catch(_){ if(mounted)setState(()=>loading=false); } }
+  @override Widget build(BuildContext context){ final shown=apps.where((a)=>a.name.toLowerCase().contains(query.toLowerCase())||a.packageName.toLowerCase().contains(query.toLowerCase())).toList(); return Directionality(textDirection:TextDirection.rtl,child:Scaffold(appBar:AppBar(title:const Text('التطبيقات',style:TextStyle(fontWeight:FontWeight.w900)),actions:[if(selected.isNotEmpty)Center(child:Padding(padding:const EdgeInsets.only(left:14),child:Text('${selected.length} محدد')))]),bottomNavigationBar:selected.isEmpty?null:SafeArea(child:Padding(padding:const EdgeInsets.fromLTRB(20,8,20,14),child:FilledButton.icon(onPressed:_prepare,icon:const Icon(Icons.arrow_upward_rounded),label:Text('إرسال ${selected.length} تطبيق')))),body:loading?const Center(child:CircularProgressIndicator()):ListView(padding:const EdgeInsets.fromLTRB(20,4,20,110),children:[TextField(onChanged:(v)=>setState(()=>query=v),decoration:InputDecoration(hintText:'ابحث عن تطبيق',prefixIcon:const Icon(Icons.search_rounded),filled:true,border:OutlineInputBorder(borderRadius:BorderRadius.all(Radius.circular(18)),borderSide:BorderSide.none))),const SizedBox(height:16),Text('${shown.length} تطبيق متاح'),const SizedBox(height:8),...shown.map((a)=>_AppTile(app:a,selected:selected.contains(a.packageName),onTap:()=>setState(()=>selected.contains(a.packageName)?selected.remove(a.packageName):selected.add(a.packageName)))),if(shown.isEmpty)const Padding(padding:EdgeInsets.only(top:70),child:Center(child:Text('لم نجد تطبيقًا بهذا الاسم')))]))); }
+  Future<void> _prepare() async { final chosen=apps.where((a)=>selected.contains(a.packageName)).toList(); final files=<TransferFile>[]; for(final app in chosen){final path=await exportInstalledApp(app.packageName);if(path!=null&&File(path).existsSync())files.add(TransferFile(name:'${app.name}.apk',path:path,size:File(path).lengthSync()));} if(!mounted)return; if(files.isEmpty){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('تعذر تجهيز التطبيقات المحددة للإرسال.')));return;} Navigator.pop(context);widget.onReady(files); }
 }
 
-class SendPage extends StatefulWidget {
-  const SendPage({super.key, required this.storage, required this.discovery, required this.files, required this.deviceName, this.target});
-  final StorageService storage; final DiscoveryService discovery; final List<TransferFile> files; final String deviceName; final NearbyDevice? target;
-  @override State<SendPage> createState() => _SendPageState();
-}
-class _SendPageState extends State<SendPage> {
-  NearbyDevice? selected; TransferProgress? progress; bool running = false; String status = 'اختر جهازًا';
-  @override void initState() { super.initState(); selected = widget.target; if (selected != null) _start(); }
-  Future<void> _start() async {
-    if (running || selected == null) return;
-    setState(() { running = true; status = 'جاري الاتصال...'; });
-    final socket = await widget.discovery.connect(selected!);
-    if (socket == null) { if (mounted) setState(() { running = false; status = 'تعذر الاتصال بالجهاز'; }); return; }
-    try {
-      await TransferService(widget.storage).send(socket: socket, senderName: widget.deviceName, files: widget.files, onProgress: (p) { if (mounted) setState(() => progress = p); });
-      await widget.storage.addHistory(TransferRecord(id: DateTime.now().toIso8601String(), direction: TransferDirection.sent, device: selected!.name, totalBytes: widget.files.fold(0, (a,b) => a+b.size), completedBytes: widget.files.fold(0, (a,b) => a+b.size), status: 'success', createdAt: DateTime.now()));
-      if (mounted) setState(() => status = 'تم الإرسال والتحقق');
-    } catch (e) { if (mounted) setState(() => status = _humanError(e)); }
-    finally { await socket.close(); if (mounted) setState(() => running = false); }
-  }
-  @override Widget build(BuildContext context) => Directionality(textDirection: TextDirection.rtl, child: Scaffold(appBar: AppBar(title: const Text('إرسال')), body: ListView(padding: const EdgeInsets.all(20), children: [
-    _TransferCard(progress: progress, files: widget.files, status: status), const SizedBox(height: 18),
-    if (selected == null) StreamBuilder<List<NearbyDevice>>(stream: widget.discovery.devices, initialData: const [], builder: (c,s) => Column(children: s.data!.map((d) => Padding(padding: const EdgeInsets.only(bottom: 8), child: _DeviceTile(device: d, onTap: () { setState(() => selected = d); _start(); }))).toList())),
-    if (selected != null && !running && progress == null) FilledButton.icon(onPressed: _start, icon: const Icon(Icons.bolt_rounded), label: const Text('بدء النقل')),
-  ])));
+class SendPage extends StatefulWidget { const SendPage({super.key,required this.storage,required this.discovery,required this.files,required this.deviceName,this.target}); final StorageService storage; final DiscoveryService discovery; final List<TransferFile> files; final String deviceName; final NearbyDevice? target; @override State<SendPage> createState()=>_SendPageState(); }
+class _SendPageState extends State<SendPage>{NearbyDevice? selected;TransferProgress? progress;bool running=false;String status='اختر جهازًا';@override void initState(){super.initState();selected=widget.target;if(selected!=null)_start();}Future<void> _start()async{if(running||selected==null)return;setState((){running=true;status='جاري الاتصال...';});final socket=await widget.discovery.connect(selected!);if(socket==null){if(mounted)setState((){running=false;status='تعذر الاتصال بالجهاز';});return;}try{await TransferService(widget.storage).send(socket:socket,senderName:widget.deviceName,files:widget.files,onProgress:(p){if(mounted)setState(()=>progress=p);});await widget.storage.addHistory(TransferRecord(id:DateTime.now().toIso8601String(),direction:TransferDirection.sent,device:selected!.name,totalBytes:widget.files.fold(0,(a,b)=>a+b.size),completedBytes:widget.files.fold(0,(a,b)=>a+b.size),status:'success',createdAt:DateTime.now()));if(mounted)setState(()=>status='تم الإرسال والتحقق');}catch(e){if(mounted)setState(()=>status=_humanError(e));}finally{await socket.close();if(mounted)setState(()=>running=false);}}@override Widget build(BuildContext context)=>Directionality(textDirection:TextDirection.rtl,child:Scaffold(appBar:AppBar(title:const Text('إرسال')),body:ListView(padding:const EdgeInsets.all(20),children:[_TransferCard(progress:progress,files:widget.files,status:status),const SizedBox(height:18),if(selected==null)StreamBuilder<List<NearbyDevice>>(stream:widget.discovery.devices,initialData:const[],builder:(c,s)=>Column(children:s.data!.map((d)=>Padding(padding:const EdgeInsets.only(bottom:8),child:_DeviceTile(device:d,onTap:(){setState(()=>selected=d);_start();}))).toList())),if(selected!=null&&!running&&progress==null)FilledButton.icon(onPressed:_start,icon:const Icon(Icons.bolt_rounded),label:const Text('بدء النقل'))])));}
 }
 
-class ReceivePage extends StatefulWidget { const ReceivePage({super.key, required this.storage, required this.discovery}); final StorageService storage; final DiscoveryService discovery; @override State<ReceivePage> createState() => _ReceivePageState(); }
-class _ReceivePageState extends State<ReceivePage> {
-  ServerSocket? server; Socket? pending; SocketReader? reader; Map<String,dynamic>? offer; TransferProgress? progress; bool busy=false;
-  @override void initState(){super.initState(); _listen();}
-  Future<void> _listen() async { server = await widget.discovery.transferServer; server?.listen((socket) async { if(busy||pending!=null){await socket.close();return;} pending=socket; reader=SocketReader(socket); try{final first=await reader!.readLine(); if(first['type']=='offer'&&mounted)setState(()=>offer=first);}catch(_){await socket.close();} }); }
-  Future<void> _accept() async { final socket=pending,input=reader,o=offer; if(socket==null||input==null||o==null)return; setState(()=>busy=true); final files=(o['files'] as List).map((e)=>TransferFile(name:e['name'],path:'',size:(e['size'] as num).toInt(),hash:e['hash'])).toList(); try{await TransferService(widget.storage).receive(socket:socket,reader:input,files:files,onProgress:(p){if(mounted)setState(()=>progress=p);}); await widget.storage.addHistory(TransferRecord(id:DateTime.now().toIso8601String(),direction:TransferDirection.received,device:o['sender']??'جهاز',totalBytes:files.fold(0,(a,b)=>a+b.size),completedBytes:files.fold(0,(a,b)=>a+b.size),status:'success',createdAt:DateTime.now()));}catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(_humanError(e))));}finally{await socket.close();if(mounted)setState((){busy=false;pending=null;reader=null;offer=null;});}}
-  Future<void> _reject() async { await pending?.close(); if(mounted)setState((){pending=null;reader=null;offer=null;}); }
-  @override Widget build(BuildContext context)=>Directionality(textDirection:TextDirection.rtl,child:Scaffold(appBar:AppBar(title:const Text('استقبال')),body:ListView(padding:const EdgeInsets.all(20),children:[if(offer!=null)_IncomingCard(offer:offer!,onAccept:_accept,onReject:_reject),if(offer==null&&progress==null)const _EmptyReceive(),if(progress!=null)_TransferCard(progress:progress,files:const[],status:progress!.status)])));
-}
+class ReceivePage extends StatefulWidget{const ReceivePage({super.key,required this.storage,required this.discovery});final StorageService storage;final DiscoveryService discovery;@override State<ReceivePage>createState()=>_ReceivePageState();}
+class _ReceivePageState extends State<ReceivePage>{ServerSocket? server;Socket? pending;SocketReader? reader;Map<String,dynamic>? offer;TransferProgress? progress;bool busy=false;@override void initState(){super.initState();_listen();}Future<void> _listen()async{server=await widget.discovery.transferServer;server?.listen((socket)async{if(busy||pending!=null){await socket.close();return;}pending=socket;reader=SocketReader(socket);try{final first=await reader!.readLine();if(first['type']=='offer'&&mounted)setState(()=>offer=first);}catch(_){await socket.close();}});}Future<void> _accept()async{final socket=pending,input=reader,o=offer;if(socket==null||input==null||o==null)return;setState(()=>busy=true);final files=(o['files']as List).map((e)=>TransferFile(name:e['name'],path:'',size:(e['size']as num).toInt(),hash:e['hash'])).toList();try{await TransferService(widget.storage).receive(socket:socket,reader:input,files:files,onProgress:(p){if(mounted)setState(()=>progress=p);});await widget.storage.addHistory(TransferRecord(id:DateTime.now().toIso8601String(),direction:TransferDirection.received,device:o['sender']??'جهاز',totalBytes:files.fold(0,(a,b)=>a+b.size),completedBytes:files.fold(0,(a,b)=>a+b.size),status:'success',createdAt:DateTime.now()));}catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(_humanError(e))));}finally{await socket.close();if(mounted)setState((){busy=false;pending=null;reader=null;offer=null;});}}Future<void> _reject()async{await pending?.close();if(mounted)setState((){pending=null;reader=null;offer=null;});}@override Widget build(BuildContext context)=>Directionality(textDirection:TextDirection.rtl,child:Scaffold(appBar:AppBar(title:const Text('استقبال')),body:ListView(padding:const EdgeInsets.all(20),children:[if(offer!=null)_IncomingCard(offer:offer!,onAccept:_accept,onReject:_reject),if(offer==null&&progress==null)const _EmptyReceive(),if(progress!=null)_TransferCard(progress:progress,files:const[],status:progress!.status)])));}}
 
-class SettingsPage extends StatefulWidget { const SettingsPage({super.key,required this.storage}); final StorageService storage; @override State<SettingsPage> createState()=>_SettingsState(); }
-class _SettingsState extends State<SettingsPage>{late final TextEditingController c=TextEditingController(); @override void initState(){super.initState();widget.storage.deviceName().then((v){if(mounted)c.text=v;});} @override void dispose(){c.dispose();super.dispose();} @override Widget build(BuildContext context)=>Directionality(textDirection:TextDirection.rtl,child:Scaffold(appBar:AppBar(title:const Text('الإعدادات')),body:ListView(padding:const EdgeInsets.all(20),children:[TextField(controller:c,decoration:const InputDecoration(labelText:'اسم الجهاز',prefixIcon:Icon(Icons.devices_other_rounded),border:OutlineInputBorder())),const SizedBox(height:12),FilledButton(onPressed:()async{await widget.storage.setDeviceName(c.text);if(mounted)Navigator.pop(context);},child:const Text('حفظ')),const SizedBox(height:24),const ListTile(leading:Icon(Icons.shield_outlined),title:Text('الخصوصية'),subtitle:Text('النقل يتم مباشرة بين الأجهزة. لا نرفع الملفات إلى خادم مركزي.'))])));}
+class SettingsPage extends StatefulWidget{const SettingsPage({super.key,required this.storage});final StorageService storage;@override State<SettingsPage>createState()=>_SettingsState();}
+class _SettingsState extends State<SettingsPage>{late final TextEditingController c=TextEditingController();@override void initState(){super.initState();widget.storage.deviceName().then((v){if(mounted)c.text=v;});}@override void dispose(){c.dispose();super.dispose();}@override Widget build(BuildContext context)=>Directionality(textDirection:TextDirection.rtl,child:Scaffold(appBar:AppBar(title:const Text('الإعدادات')),body:ListView(padding:const EdgeInsets.all(20),children:[TextField(controller:c,decoration:const InputDecoration(labelText:'اسم الجهاز',prefixIcon:Icon(Icons.devices_other_rounded),border:OutlineInputBorder())),const SizedBox(height:12),FilledButton(onPressed:()async{await widget.storage.setDeviceName(c.text);if(mounted)Navigator.pop(context);},child:const Text('حفظ')),const SizedBox(height:24),const ListTile(leading:Icon(Icons.shield_outlined),title:Text('الخصوصية'),subtitle:Text('النقل يتم مباشرة بين الأجهزة. لا نرفع الملفات إلى خادم مركزي.'))])));}
 
 class _PrimaryAction extends StatelessWidget{const _PrimaryAction({required this.icon,required this.title,required this.subtitle,required this.onTap});final IconData icon;final String title,subtitle;final VoidCallback onTap;@override Widget build(BuildContext c)=>InkWell(onTap:onTap,borderRadius:BorderRadius.circular(28),child:Container(height:148,padding:const EdgeInsets.all(22),decoration:BoxDecoration(borderRadius:BorderRadius.circular(28),gradient:LinearGradient(begin:Alignment.topRight,end:Alignment.bottomLeft,colors:[Theme.of(c).colorScheme.primaryContainer,Theme.of(c).colorScheme.primary.withOpacity(.78)])),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Icon(icon,size:31),const Spacer(),Text(title,style:const TextStyle(fontSize:23,fontWeight:FontWeight.w900)),Text(subtitle,style:TextStyle(color:Theme.of(c).colorScheme.onPrimaryContainer.withOpacity(.75),fontSize:12))])));}
 class _SecondaryAction extends StatelessWidget{const _SecondaryAction({required this.icon,required this.title,required this.subtitle,required this.onTap});final IconData icon;final String title,subtitle;final VoidCallback onTap;@override Widget build(BuildContext c)=>InkWell(onTap:onTap,borderRadius:BorderRadius.circular(28),child:Container(height:148,padding:const EdgeInsets.all(22),decoration:BoxDecoration(borderRadius:BorderRadius.circular(28),color:Theme.of(c).colorScheme.surfaceContainerHighest),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Icon(icon,size:31),const Spacer(),Text(title,style:const TextStyle(fontSize:23,fontWeight:FontWeight.w900)),Text(subtitle,style:TextStyle(color:Theme.of(c).colorScheme.onSurfaceVariant,fontSize:12))])));}

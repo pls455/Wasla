@@ -52,13 +52,11 @@ jobs:
             }
 
             private fun listLaunchableApps(): List<Map<String, Any?>> {
-              val intent = packageManager.getLaunchIntentForPackage(packageName)
               val query = packageManager.queryIntentActivities(
                 android.content.Intent(android.content.Intent.ACTION_MAIN).addCategory(android.content.Intent.CATEGORY_LAUNCHER), 0
               )
               return query.mapNotNull { info ->
                 val app = info.activityInfo.applicationInfo
-                if (app.packageName == packageName) return@mapNotNull null
                 try {
                   val label = app.loadLabel(packageManager).toString().ifBlank { app.packageName }
                   val icon = app.loadIcon(packageManager)
@@ -112,6 +110,16 @@ jobs:
           permissions = '''\n    <uses-permission android:name="android.permission.INTERNET" />\n    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />\n    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />\n    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />\n    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\n'''
           if 'android.permission.INTERNET' not in s:
               s = s.replace(marker, marker + permissions)
+          p.write_text(s)
+          PY
+      - name: Normalize Dart numeric types for strict analyzer
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('lib/main.dart')
+          s = p.read_text()
+          s = s.replace("final seconds = value.inSeconds.clamp(0, 999999);", "final seconds = value.inSeconds.clamp(0, 999999).toInt();")
+          s = s.replace("(p.bytes / p.total).clamp(0.0, 1.0)", "(p.bytes / p.total).clamp(0.0, 1.0).toDouble()")
           p.write_text(s)
           PY
       - name: Remove generated demo test

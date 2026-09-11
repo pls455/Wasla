@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
@@ -53,16 +52,9 @@ class _WaslaAppState extends State<WaslaApp> {
   ThemeMode themeMode = ThemeMode.dark;
 
   @override
-  void initState() {
-    super.initState();
-    discovery.start();
-  }
-
+  void initState() { super.initState(); discovery.start(); }
   @override
-  void dispose() {
-    discovery.dispose();
-    super.dispose();
-  }
+  void dispose() { discovery.dispose(); super.dispose(); }
 
   ThemeData _theme(Brightness brightness) {
     final dark = brightness == Brightness.dark;
@@ -100,7 +92,6 @@ class HomePage extends StatefulWidget {
   final StorageService storage;
   final DiscoveryService discovery;
   final VoidCallback onToggleTheme;
-
   @override
   State<HomePage> createState() => _HomePageState();
 }
@@ -113,19 +104,11 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    widget.storage.deviceName().then((name) {
-      if (mounted) setState(() => deviceName = name);
-    });
-    _devicesSub = widget.discovery.devices.listen((value) {
-      if (mounted) setState(() => devices = value);
-    });
+    widget.storage.deviceName().then((name) { if (mounted) setState(() => deviceName = name); });
+    _devicesSub = widget.discovery.devices.listen((value) { if (mounted) setState(() => devices = value); });
   }
-
   @override
-  void dispose() {
-    _devicesSub.cancel();
-    super.dispose();
-  }
+  void dispose() { _devicesSub.cancel(); super.dispose(); }
 
   Future<void> _pickFiles({NearbyDevice? target}) async {
     final picked = await FilePicker.pickFiles(allowMultiple: true);
@@ -225,7 +208,6 @@ class SendPage extends StatefulWidget {
   final DiscoveryService discovery;
   final List<TransferFile> files;
   final NearbyDevice? target;
-
   @override
   State<SendPage> createState() => _SendPageState();
 }
@@ -245,7 +227,6 @@ class _SendPageState extends State<SendPage> {
     selected = widget.target;
     _sub = widget.discovery.devices.listen((value) { if (mounted) setState(() => devices = value); });
   }
-
   @override
   void dispose() { _sub.cancel(); super.dispose(); }
 
@@ -429,27 +410,29 @@ class _AppPickerPageState extends State<AppPickerPage> {
   @override
   Widget build(BuildContext context) {
     final shown = apps.where((a) => a.name.toLowerCase().contains(query.toLowerCase()) || a.packageName.toLowerCase().contains(query.toLowerCase())).toList();
+    final list = <Widget>[
+      TextField(onChanged: (v) => setState(() => query = v), decoration: const InputDecoration(hintText: 'ابحث عن تطبيق', prefixIcon: Icon(Icons.search_rounded))),
+      const SizedBox(height: 14),
+      Text('${shown.length} تطبيق متاح'),
+      const SizedBox(height: 8),
+    ];
+    for (final app in shown) {
+      list.add(Padding(padding: const EdgeInsets.only(bottom: 8), child: _AppTile(app: app, selected: selected.contains(app.packageName), onTap: () => setState(() {
+        if (selected.contains(app.packageName)) {
+          selected.remove(app.packageName);
+        } else {
+          selected.add(app.packageName);
+        }
+      }))));
+    }
+    if (shown.isEmpty) list.add(const Padding(padding: EdgeInsets.only(top: 70), child: Center(child: Text('لم نجد تطبيقًا بهذا الاسم'))));
+
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        appBar: AppBar(
-          title: const Text('التطبيقات', style: TextStyle(fontWeight: FontWeight.w900)),
-          actions: selected.isEmpty ? const [] : [Padding(padding: const EdgeInsets.all(14), child: Center(child: Text('${selected.length} محدد')))],
-        ),
+        appBar: AppBar(title: const Text('التطبيقات', style: TextStyle(fontWeight: FontWeight.w900)), actions: selected.isEmpty ? const [] : [Padding(padding: const EdgeInsets.all(14), child: Center(child: Text('${selected.length} محدد')))]),
         bottomNavigationBar: selected.isEmpty ? null : SafeArea(child: Padding(padding: const EdgeInsets.fromLTRB(20, 8, 20, 14), child: FilledButton.icon(onPressed: _prepare, icon: const Icon(Icons.send_rounded), label: Text('تجهيز ${selected.length} تطبيق')))),
-        body: loading
-            ? const Center(child: CircularProgressIndicator())
-            : ListView(
-                padding: const EdgeInsets.all(20),
-                children: [
-                  TextField(onChanged: (v) => setState(() => query = v), decoration: const InputDecoration(hintText: 'ابحث عن تطبيق', prefixIcon: Icon(Icons.search_rounded))),
-                  const SizedBox(height: 14),
-                  Text('${shown.length} تطبيق متاح'),
-                  const SizedBox(height: 8),
-                  ...shown.map((app) => Padding(padding: const EdgeInsets.only(bottom: 8), child: _AppTile(app: app, selected: selected.contains(app.packageName), onTap: () => setState(() { if (selected.contains(app.packageName)) { selected.remove(app.packageName); } else { selected.add(app.packageName); } }))),
-                  if (shown.isEmpty) const Padding(padding: EdgeInsets.only(top: 70), child: Center(child: Text('لم نجد تطبيقًا بهذا الاسم'))),
-                ],
-              ),
+        body: loading ? const Center(child: CircularProgressIndicator()) : ListView(padding: const EdgeInsets.all(20), children: list),
       ),
     );
   }
@@ -465,7 +448,6 @@ class SettingsPage extends StatefulWidget {
 class _SettingsPageState extends State<SettingsPage> {
   final controller = TextEditingController();
   bool saving = false;
-
   @override
   void initState() { super.initState(); widget.storage.deviceName().then((v) { if (mounted) controller.text = v; }); }
   @override
@@ -480,14 +462,11 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Scaffold(
-        appBar: AppBar(title: const Text('الإعدادات', style: TextStyle(fontWeight: FontWeight.w900))),
-        body: ListView(
-          padding: const EdgeInsets.all(20),
-          children: [
+  Widget build(BuildContext context) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: Scaffold(
+          appBar: AppBar(title: const Text('الإعدادات', style: TextStyle(fontWeight: FontWeight.w900))),
+          body: ListView(padding: const EdgeInsets.all(20), children: [
             const Text('اسم الجهاز', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
             const SizedBox(height: 8),
             TextField(controller: controller, textInputAction: TextInputAction.done),
@@ -495,11 +474,9 @@ class _SettingsPageState extends State<SettingsPage> {
             FilledButton.icon(onPressed: saving ? null : _save, icon: const Icon(Icons.save_rounded), label: Text(saving ? 'جارٍ الحفظ...' : 'حفظ')),
             const SizedBox(height: 24),
             const ListTile(leading: Icon(Icons.security_rounded), title: Text('خصوصية محلية'), subtitle: Text('الملفات تنتقل مباشرة بين الأجهزة ولا تحتاج خادمًا وسيطًا.')),
-          ],
+          ]),
         ),
-      ),
-    );
-  }
+      );
 }
 
 class _BigAction extends StatelessWidget {
@@ -509,23 +486,13 @@ class _BigAction extends StatelessWidget {
   final String subtitle;
   final VoidCallback onTap;
   final bool primary;
-
   @override
   Widget build(BuildContext context) => Card(
         color: primary ? Theme.of(context).colorScheme.primaryContainer : Theme.of(context).colorScheme.surfaceContainerHighest,
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
           onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(18),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Icon(icon, size: 30),
-              const SizedBox(height: 20),
-              Text(title, style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w900)),
-              const SizedBox(height: 4),
-              Text(subtitle, style: const TextStyle(fontSize: 12)),
-            ]),
-          ),
+          child: Padding(padding: const EdgeInsets.all(18), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Icon(icon, size: 30), const SizedBox(height: 20), Text(title, style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w900)), const SizedBox(height: 4), Text(subtitle, style: const TextStyle(fontSize: 12))]),
         ),
       );
 }
@@ -536,16 +503,8 @@ class _ActionTile extends StatelessWidget {
   final String title;
   final String subtitle;
   final VoidCallback onTap;
-
   @override
-  Widget build(BuildContext context) => ListTile(
-        contentPadding: const EdgeInsets.symmetric(vertical: 4),
-        leading: CircleAvatar(radius: 25, child: Icon(icon)),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
-        subtitle: Text(subtitle),
-        trailing: const Icon(Icons.chevron_left_rounded),
-        onTap: onTap,
-      );
+  Widget build(BuildContext context) => ListTile(contentPadding: const EdgeInsets.symmetric(vertical: 4), leading: CircleAvatar(radius: 25, child: Icon(icon)), title: Text(title, style: const TextStyle(fontWeight: FontWeight.w800)), subtitle: Text(subtitle), trailing: const Icon(Icons.chevron_left_rounded), onTap: onTap);
 }
 
 class _DeviceTile extends StatelessWidget {
@@ -553,58 +512,28 @@ class _DeviceTile extends StatelessWidget {
   final NearbyDevice device;
   final VoidCallback? onTap;
   final bool selected;
-
   @override
-  Widget build(BuildContext context) => Card(
-        child: ListTile(
-          onTap: onTap,
-          leading: CircleAvatar(child: Icon(selected ? Icons.check_rounded : Icons.phone_android_rounded)),
-          title: Text(device.name, style: const TextStyle(fontWeight: FontWeight.w800)),
-          subtitle: Text('${device.host}:${device.port}'),
-          trailing: Icon(selected ? Icons.check_circle_rounded : Icons.chevron_left_rounded),
-        ),
-      );
+  Widget build(BuildContext context) => Card(child: ListTile(onTap: onTap, leading: CircleAvatar(child: Icon(selected ? Icons.check_rounded : Icons.phone_android_rounded)), title: Text(device.name, style: const TextStyle(fontWeight: FontWeight.w800)), subtitle: Text('${device.host}:${device.port}'), trailing: Icon(selected ? Icons.check_circle_rounded : Icons.chevron_left_rounded)));
 }
 
 class _EmptyNearby extends StatelessWidget {
   const _EmptyNearby();
   @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.all(22),
-        decoration: BoxDecoration(borderRadius: BorderRadius.circular(22), border: Border.all(color: Theme.of(context).dividerColor)),
-        child: const Column(children: [
-          Icon(Icons.devices_other_rounded, size: 38),
-          SizedBox(height: 10),
-          Text('لا توجد أجهزة قريبة حاليًا', style: TextStyle(fontWeight: FontWeight.w800)),
-          SizedBox(height: 4),
-          Text('تأكد أن الجهازين على الشبكة نفسها وافتح وصلة عليهما.', textAlign: TextAlign.center),
-        ]),
-      );
+  Widget build(BuildContext context) => Container(padding: const EdgeInsets.all(22), decoration: BoxDecoration(borderRadius: BorderRadius.circular(22), border: Border.all(color: Theme.of(context).dividerColor)), child: const Column(children: [Icon(Icons.devices_other_rounded, size: 38), SizedBox(height: 10), Text('لا توجد أجهزة قريبة حاليًا', style: TextStyle(fontWeight: FontWeight.w800)), SizedBox(height: 4), Text('تأكد أن الجهازين على الشبكة نفسها وافتح وصلة عليهما.', textAlign: TextAlign.center)]));
 }
 
 class _TransferSummary extends StatelessWidget {
   const _TransferSummary({required this.files});
   final List<TransferFile> files;
   @override
-  Widget build(BuildContext context) {
-    final total = files.fold<int>(0, (a, b) => a + b.size);
-    return Card(child: Padding(padding: const EdgeInsets.all(18), child: Row(children: [const Icon(Icons.folder_copy_rounded, size: 30), const SizedBox(width: 12), Expanded(child: Text('${files.length} ملف\n${_fmt(total)}', style: const TextStyle(fontWeight: FontWeight.w800)))])));
-  }
+  Widget build(BuildContext context) { final total = files.fold<int>(0, (a, b) => a + b.size); return Card(child: Padding(padding: const EdgeInsets.all(18), child: Row(children: [const Icon(Icons.folder_copy_rounded, size: 30), const SizedBox(width: 12), Expanded(child: Text('${files.length} ملف\n${_fmt(total)}', style: const TextStyle(fontWeight: FontWeight.w800)))]))); }
 }
 
 class _ProgressCard extends StatelessWidget {
   const _ProgressCard({required this.progress});
   final TransferProgress progress;
   @override
-  Widget build(BuildContext context) {
-    final value = progress.total == 0 ? 0.0 : (progress.bytes / progress.total).clamp(0.0, 1.0).toDouble();
-    return Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(children: [
-      LinearProgressIndicator(value: value, minHeight: 8, borderRadius: BorderRadius.circular(8)),
-      const SizedBox(height: 10),
-      Row(children: [Text('${(value * 100).round()}%'), const Spacer(), Text('${_fmt(progress.speed)}/ث')]),
-      if (progress.eta != null) Text('متبقي تقريبًا ${_duration(progress.eta!)}'),
-    ])));
-  }
+  Widget build(BuildContext context) { final value = progress.total == 0 ? 0.0 : (progress.bytes / progress.total).clamp(0.0, 1.0).toDouble(); return Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(children: [LinearProgressIndicator(value: value, minHeight: 8, borderRadius: BorderRadius.circular(8)), const SizedBox(height: 10), Row(children: [Text('${(value * 100).round()}%'), const Spacer(), Text('${_fmt(progress.speed)}/ث')]), if (progress.eta != null) Text('متبقي تقريبًا ${_duration(progress.eta!)}')]))); }
 }
 
 class _AppTile extends StatelessWidget {
@@ -616,18 +545,6 @@ class _AppTile extends StatelessWidget {
   Widget build(BuildContext context) => Card(child: ListTile(onTap: onTap, leading: const CircleAvatar(child: Icon(Icons.apps_rounded)), title: Text(app.name, style: const TextStyle(fontWeight: FontWeight.w800)), subtitle: Text('${app.packageName}\n${_fmt(app.size)}'), isThreeLine: true, trailing: Icon(selected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded)));
 }
 
-String _fmt(num bytes) {
-  if (bytes < 1024) return '${bytes.round()} B';
-  if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
-  if (bytes < 1024 * 1024 * 1024) return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
-  return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB';
-}
-
-String _duration(Duration d) {
-  final seconds = d.inSeconds;
-  if (seconds < 60) return '${seconds}ث';
-  if (seconds < 3600) return '${seconds ~/ 60}د';
-  return '${seconds ~/ 3600}س';
-}
-
+String _fmt(num bytes) { if (bytes < 1024) return '${bytes.round()} B'; if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB'; if (bytes < 1024 * 1024 * 1024) return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB'; return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB'; }
+String _duration(Duration d) { final seconds = d.inSeconds; if (seconds < 60) return '${seconds}ث'; if (seconds < 3600) return '${seconds ~/ 60}د'; return '${seconds ~/ 3600}س'; }
 String _error(Object e) => e is StateError ? e.toString() : 'حدث خطأ أثناء النقل.';

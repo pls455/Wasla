@@ -76,6 +76,7 @@ jobs:
             } catch (_: Exception) { null }
             private fun readSharedContent(): Map<String, Any?> {
               val result = mutableMapOf<String, Any?>("files" to emptyList<String>(), "text" to null)
+              val files = mutableListOf<String>()
               val intent = intent ?: return result
               val text = intent.getStringExtra(Intent.EXTRA_TEXT)
               if (!text.isNullOrBlank()) result["text"] = text

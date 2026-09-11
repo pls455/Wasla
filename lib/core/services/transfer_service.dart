@@ -91,7 +91,7 @@ class TransferService {
           final bytes = file.readSync(min(_chunkSize(done, started), f.size - sent));
           if (bytes.isEmpty) throw StateError('تعذر قراءة الملف');
           socket.add(bytes);
-          await socket.flush();
+          // لا نعمل flush لكل قطعة. Socket buffers تجمع البيانات أصلًا، وawait لكل 256KB يضيف overhead واضحًا.
           sent += bytes.length;
           done += bytes.length;
           onProgress(_progress(done, total, started, 'جاري الإرسال'));
@@ -132,10 +132,11 @@ class TransferService {
       }
       final file = part.openSync(mode: FileMode.append);
       var received = offset;
+      done += offset;
       try {
         while (received < size) {
           if (_cancelled) throw StateError('تم إلغاء النقل');
-          final bytes = await input.readExact(min(256 * 1024, size - received));
+          final bytes = await input.readExact(min(1024 * 1024, size - received));
           file.writeFromSync(bytes);
           received += bytes.length;
           done += bytes.length;
@@ -158,11 +159,11 @@ class TransferService {
   }
 
   int _chunkSize(int bytes, DateTime started) {
-    if (bytes < 2 * 1024 * 1024) return 256 * 1024;
+    if (bytes < 2 * 1024 * 1024) return 512 * 1024;
     final speed = bytes / max(0.001, DateTime.now().difference(started).inMilliseconds / 1000);
     if (speed > 30 * 1024 * 1024) return 1024 * 1024;
-    if (speed > 10 * 1024 * 1024) return 512 * 1024;
-    return 256 * 1024;
+    if (speed > 10 * 1024 * 1024) return 1024 * 1024;
+    return 512 * 1024;
   }
 
   File _target(Directory base, String name) {

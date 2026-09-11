@@ -63,7 +63,7 @@ class _HomePageState extends State<HomePage> {
   Future<void> _sendFiles() async {
     final picked = await FilePicker.pickFiles(allowMultiple: true);
     if (!mounted || picked.isEmpty) return;
-    final files = picked.where((f) => f.path != null).map((f) => TransferFile(name: f.name, path: f.path!, size: f.lengthSync() ?? 0)).toList();
+    final files = picked.where((f) => f.path != null).map((f) => TransferFile(name: f.name, path: f.path!, size: f.lengthSync())).toList();
     if (files.isNotEmpty) _openSend(files);
   }
   void _openSend(List<TransferFile> files) => Navigator.push(context, MaterialPageRoute(builder: (_) => SendPage(storage: widget.storage, discovery: widget.discovery, files: files, deviceName: deviceName)));
@@ -81,7 +81,7 @@ class _HomePageState extends State<HomePage> {
 
   void _showSendOptions({NearbyDevice? target}) => showModalBottomSheet<void>(context: context, showDragHandle: true, backgroundColor: Theme.of(context).colorScheme.surface, builder: (sheet) => Directionality(textDirection: TextDirection.rtl, child: Padding(padding: const EdgeInsets.fromLTRB(20, 4, 20, 30), child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
     const Text('ماذا تريد أن ترسل؟', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900)), const SizedBox(height: 7), Text(target == null ? 'اختر المحتوى ثم اختر الجهاز.' : 'إلى ${target.name}'), const SizedBox(height: 18),
-    _SheetAction(icon: Icons.folder_rounded, title: 'ملفات', subtitle: 'صور، فيديو، مستندات وغيرها', onTap: () async { Navigator.pop(sheet); final picked = await FilePicker.pickFiles(allowMultiple: true); if (!mounted || picked.isEmpty) return; final files = picked.where((f) => f.path != null).map((f) => TransferFile(name: f.name, path: f.path!, size: f.lengthSync() ?? 0)).toList(); if (files.isNotEmpty) Navigator.push(context, MaterialPageRoute(builder: (_) => SendPage(storage: widget.storage, discovery: widget.discovery, files: files, deviceName: deviceName, target: target))); }),
+    _SheetAction(icon: Icons.folder_rounded, title: 'ملفات', subtitle: 'صور، فيديو، مستندات وغيرها', onTap: () async { Navigator.pop(sheet); final picked = await FilePicker.pickFiles(allowMultiple: true); if (!mounted || picked.isEmpty) return; final files = picked.where((f) => f.path != null).map((f) => TransferFile(name: f.name, path: f.path!, size: f.lengthSync())).toList(); if (files.isNotEmpty) Navigator.push(context, MaterialPageRoute(builder: (_) => SendPage(storage: widget.storage, discovery: widget.discovery, files: files, deviceName: deviceName, target: target))); }),
     const SizedBox(height: 10), _SheetAction(icon: Icons.apps_rounded, title: 'تطبيقات', subtitle: 'اختر تطبيقات مثبتة على جهازك', onTap: () { Navigator.pop(sheet); Navigator.push(context, MaterialPageRoute(builder: (_) => AppPickerPage(onReady: (files) => _openSendTo(files, target)))); }),
     const SizedBox(height: 10), _SheetAction(icon: Icons.link_rounded, title: 'نص أو رابط', subtitle: 'ضمن المرحلة التالية', onTap: () { Navigator.pop(sheet); ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('مشاركة النص والروابط ضمن المرحلة التالية.'))); }),
   ]))));

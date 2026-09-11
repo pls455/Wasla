@@ -76,7 +76,6 @@ jobs:
             } catch (_: Exception) { null }
             private fun readSharedContent(): Map<String, Any?> {
               val result = mutableMapOf<String, Any?>("files" to emptyList<String>(), "text" to null)
-              val files = mutableListOf<String>()
               val intent = intent ?: return result
               val text = intent.getStringExtra(Intent.EXTRA_TEXT)
               if (!text.isNullOrBlank()) result["text"] = text
@@ -107,16 +106,18 @@ jobs:
             } catch (_: Exception) { null }
           }
           KOTLIN
-      - name: Add share sheet and network permissions
+      - name: Add share sheet, network and camera permissions
         run: |
           python3 - <<'PY'
           from pathlib import Path
           p = Path('android/app/src/main/AndroidManifest.xml')
           s = p.read_text()
           marker = '<manifest xmlns:android="http://schemas.android.com/apk/res/android">'
-          permissions = '''\n    <uses-permission android:name="android.permission.INTERNET" />\n    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />\n    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />\n    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />\n    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\n'''
+          permissions = '''\n    <uses-permission android:name="android.permission.INTERNET" />\n    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />\n    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />\n    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />\n    <uses-permission android:name="android.permission.CAMERA" />\n    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\n'''
           if 'android.permission.INTERNET' not in s:
               s = s.replace(marker, marker + permissions)
+          elif 'android.permission.CAMERA' not in s:
+              s = s.replace('</manifest>', '    <uses-permission android:name="android.permission.CAMERA" />\n</manifest>')
           if 'android.intent.action.SEND' not in s:
               s = s.replace('</activity>', '''
                 <intent-filter>
